@@ -1,0 +1,25 @@
+.poll-room {
+    text-align: center;
+    padding: 2rem;
+}
+
+.options {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-top: 1rem;
+}
+
+.exit-button {
+    margin-top: 1rem;
+    padding: 0.5rem 1rem;
+    background-color: #d9534f;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.exit-button:hover {
+    background-color: #c9302c;
+}
