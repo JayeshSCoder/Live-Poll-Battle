@@ -41,7 +41,7 @@ const App = () => {
         if (isCreating) {
             setVotes({ Cats: 0, Dogs: 0 });
             localStorage.removeItem('vote');
-            localStorage.setItem('pollEndTime', Date.now() + 60000);
+            localStorage.setItem('pollEndTime', Date.now() + 6000);
             setVotingEnded(false);
             setHasVoted(false);
         }
