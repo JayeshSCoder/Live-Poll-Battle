@@ -14,6 +14,8 @@ function handleConnection(ws, wss) {
 
         const { type, payload } = data;
 
+
+
         if (type === 'join') {
             const { roomCode, userName, isCreating } = payload;
 
@@ -36,7 +38,29 @@ function handleConnection(ws, wss) {
             ws.send(JSON.stringify({ type: 'joined', payload: { roomCode, votes: rooms[roomCode].votes } }));
         }
 
-        if (type === 'vote') {
+        else if (type === 'rejoin') {
+            const { roomCode, userName } = payload;
+
+            if (!rooms[roomCode]) {
+                ws.send(JSON.stringify({ type: 'error', message: 'Room not found' }));
+                return;
+            }
+
+            // Optionally re-add user
+            rooms[roomCode].users.push({ name: userName, ws });
+
+            ws.send(
+                JSON.stringify({
+                    type: 'rejoined',
+                    payload: {
+                        votes: rooms[roomCode].votes,
+                    },
+                })
+            );
+        }
+
+
+        else if (type === 'vote') {
             const { roomCode, option } = payload;
 
             if (rooms[roomCode]) {
