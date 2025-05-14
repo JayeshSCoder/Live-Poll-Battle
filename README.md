@@ -44,4 +44,4 @@ Open a new terminal window:
 
 cd client
 npm install
-npm start
+npm run dev

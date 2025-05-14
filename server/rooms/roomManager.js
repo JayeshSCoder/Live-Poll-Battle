@@ -1,100 +1,78 @@
+const { generateRoomCode } = require('../utils/generateCode');
 
-
+// Store all active rooms
 const rooms = {};
 
-function handleConnection(ws, wss) {
-    ws.on('message', (message) => {
-        let data;
-        try {
-            data = JSON.parse(message);
-        } catch (err) {
-            console.error('Invalid JSON:', err);
-            return;
-        }
-
-        const { type, payload } = data;
-
-
-
-        if (type === 'join') {
-            const { roomCode, userName, isCreating } = payload;
-
-            if (!rooms[roomCode]) {
-                if (isCreating) {
-                    rooms[roomCode] = {
-                        users: new Set(),
-                        votes: { Cats: 0, Dogs: 0 },
-                    };
-                } else {
-                    ws.send(JSON.stringify({ type: 'error', message: 'Room not found.' }));
-                    return;
-                }
-            }
-
-            rooms[roomCode].users.add(ws);
-            ws.roomCode = roomCode;
-            ws.userName = userName;
-
-            ws.send(JSON.stringify({ type: 'joined', payload: { roomCode, votes: rooms[roomCode].votes } }));
-        }
-
-        else if (type === 'rejoin') {
-            const { roomCode, userName } = payload;
-
-            if (!rooms[roomCode]) {
-                ws.send(JSON.stringify({ type: 'error', message: 'Room not found' }));
-                return;
-            }
-
-            // Optionally re-add user
-            rooms[roomCode].users.push({ name: userName, ws });
-
-            ws.send(
-                JSON.stringify({
-                    type: 'rejoined',
-                    payload: {
-                        votes: rooms[roomCode].votes,
-                    },
-                })
-            );
-        }
-
-
-        else if (type === 'vote') {
-            const { roomCode, option } = payload;
-
-            if (rooms[roomCode]) {
-                rooms[roomCode].votes[option]++;
-                broadcast(roomCode, {
-                    type: 'voteUpdate',
-                    payload: rooms[roomCode].votes,
-                });
-            }
-        }
-    });
-
-
-
-    ws.on('close', () => {
-        const { roomCode } = ws;
-        if (roomCode && rooms[roomCode]) {
-            rooms[roomCode].users.delete(ws);
-            if (rooms[roomCode].users.size === 0) {
-                delete rooms[roomCode];
-            }
-        }
-    });
+function createRoom(creatorName) {
+    const code = generateRoomCode();
+    rooms[code] = {
+        code,
+        options: { cats: 0, dogs: 0 },
+        voters: {},
+        users: [creatorName],
+        createdAt: Date.now(),
+        endNotified: false
+    };
+    return rooms[code];
 }
 
-function broadcast(roomCode, message) {
-    const room = rooms[roomCode];
-    if (!room) return;
+function joinRoom(code, username) {
+    const room = rooms[code];
+    if (!room) return { success: false, message: "Room not found" };
 
-    for (const client of room.users) {
-        if (client.readyState === 1) {
-            client.send(JSON.stringify(message));
-        }
+    if (room.users.includes(username)) {
+        return { success: true, room };
     }
+
+    room.users.push(username);
+    return { success: true, room };
 }
 
-module.exports = { handleConnection };
+function voteInRoom(code, username, option) {
+    const room = rooms[code];
+    if (!room) return { success: false, message: "Room not found" };
+
+    const votingTimeElapsed = Date.now() - room.createdAt;
+    if (votingTimeElapsed > 60000) {
+        return { success: false, message: "Voting time over" };
+    }
+
+    
+    if (room.voters[username]) {
+        return { success: false, message: "User already voted" };
+    }
+
+    
+    const normalizedOption = option.toLowerCase();
+    if (!room.options.hasOwnProperty(normalizedOption)) {
+        return { success: false, message: "Invalid option" };
+    }
+
+    
+    room.options[normalizedOption]++;
+    room.voters[username] = normalizedOption;
+
+    return { success: true, poll: room };
+}
+
+function getRoomPoll(code) {
+    return rooms[code] || null;
+}
+
+function getAllClientsInRoom(wss, code) {
+    return [...wss.clients].filter(ws =>
+        ws.roomCode === code &&
+        ws.readyState === ws.OPEN
+    );
+}
+
+
+
+module.exports = {
+    rooms,
+    createRoom,
+    joinRoom,
+    voteInRoom,
+    getRoomPoll,
+    getAllClientsInRoom,
+};

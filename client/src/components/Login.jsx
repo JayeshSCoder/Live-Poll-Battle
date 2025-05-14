@@ -3,21 +3,28 @@ import '../styles/Login.css';
 
 const Login = ({ onJoin }) => {
   const [name, setName] = useState('');
-  const [roomCode, setRoomCode] = useState('');
   const [isCreating, setIsCreating] = useState(false);
+  const [roomCode, setRoomCode] = useState('');
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (name.trim()) {
-      const finalRoomCode = isCreating ? generateRoomCode() : roomCode.trim();
-      if (finalRoomCode) {
-        onJoin(name.trim(), finalRoomCode, isCreating);
-      }
-    }
-  };
 
-  const generateRoomCode = () => {
-    return Math.random().toString(36).substring(2, 8).toUpperCase();
+    if (name.trim()) {
+      if (isCreating) {
+        // When creating a room, we don't need a room code as the server will generate it
+        onJoin(name.trim(), '', isCreating);
+      } else {
+        // When joining, we need the room code
+        const finalRoomCode = roomCode.trim();
+        if (finalRoomCode) {
+          onJoin(name.trim(), finalRoomCode, isCreating);
+        } else {
+          alert("Please enter a room code to join.");
+        }
+      }
+    } else {
+      alert("Please enter your name.");
+    }
   };
 
   return (
@@ -41,8 +48,20 @@ const Login = ({ onJoin }) => {
           />
         )}
         <div className="login-actions">
-          <button type="button" onClick={() => setIsCreating(false)}>Join Room</button>
-          <button type="button" onClick={() => setIsCreating(true)}>Create Room</button>
+          <button
+            type="button"
+            className={!isCreating ? 'active' : ''}
+            onClick={() => setIsCreating(false)}
+          >
+            Join Room
+          </button>
+          <button
+            type="button"
+            className={isCreating ? 'active' : ''}
+            onClick={() => setIsCreating(true)}
+          >
+            Create Room
+          </button>
           <button type="submit">Continue</button>
         </div>
       </form>
